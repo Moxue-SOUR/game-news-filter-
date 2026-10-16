@@ -1,0 +1,39 @@
+name: Source feasibility probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'validation/**'
+      - '.github/workflows/source-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-feasibility-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out validation code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Prepare Temurin JDK 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Fetch and inspect candidate feeds
+        run: java validation/FeedSourceProbe.java validation/sources.tsv probe-results
+      - name: Publish aggregate diagnostics only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: source-feasibility-summary
+          path: probe-results/feed-summary.csv
+          if-no-files-found: warn
+          retention-days: 7
+
